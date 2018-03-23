@@ -1,11 +1,14 @@
-from flask import Flask, render_template, redirect, session, url_for, flash
+from flask_script import Manager
 from flask_bootstrap import Bootstrap
+from flask import Flask, render_template, redirect, session, url_for, flash
 
 from item_form import NormForm
+import os
+from models import Item
+from index import app, db
 
-app = Flask(__name__)
-app.config['SECRET_KEY'] = 'hard to guess string'
 bootstrap = Bootstrap(app)
+manager = Manager(app)
 
 
 @app.route('/', methods=['GET', 'POST'])
@@ -13,11 +16,14 @@ def index():
     form = NormForm()
     if form.validate_on_submit():
         old_title = session.get('title')
-        if old_title is not None and old_title != form.title.data:
-            flash('New title')
-        session['title'] = form.title.data
+        item = Item.query.filter_by(name=form.title.data).first()
+
+        if item is None:
+            item = Item(name=form.title.data)
+            db.session.add(item)
         return redirect(url_for('index'))
-    return render_template('index.html', form=form, title=session.get('title'))
+    items = Item.query.all()
+    return render_template('index.html', form=form, items=items)
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    manager.run()
